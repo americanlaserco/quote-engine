@@ -1014,4 +1014,25 @@ function logEngraveActual() {
     .then(function(d) {
       if (d.success) {
         var st = d.stats || {};
-        fbStatus("Logged. " +
+        fbStatus("Logged. " + st.n_measurements + " measurements across " +
+                 st.n_designs + " designs - model error now " + st.model_err_pct + "%.", "green");
+      } else { fbStatus("Failed: " + (d.error || "unknown error"), "red"); }
+    })
+    .catch(function(e) { fbStatus("Error: " + e.message, "red"); });
+}
+function pullLaserTime() {
+  fbStatus("Contacting the Ruida controller...", "dim");
+  fetch("/api/laser-last-job-time")
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        var s = Math.round(d.seconds);
+        $("fb_time").value = Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+        fbStatus("Last job from " + d.source + ": " + s + "s. Check it, then Log.", "green");
+      } else { fbStatus(d.error || "Could not reach the controller.", "red"); }
+    })
+    .catch(function(e) { fbStatus("Error: " + e.message, "red"); });
+}
+</script>
+</body>
+</html>
