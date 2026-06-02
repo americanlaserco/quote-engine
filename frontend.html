@@ -646,7 +646,13 @@ function addFiles(rawFiles) {
   renderUI();
 }
 
-function removeFile(idx) { dxfFiles.splice(idx, 1); renderUI(); }
+function removeFile(idx) {
+  // Clear color state for the removed file
+  var ent = dxfFiles[idx];
+  if (ent && ent.file && fileColors[ent.file.name]) {
+    delete fileColors[ent.file.name];
+    renderColorOps();
+  } dxfFiles.splice(idx, 1); renderUI(); }
 
 function renderUI() {
   var hasFiles = dxfFiles.length > 0;
@@ -706,6 +712,11 @@ function fetchPreview(entry) {
       entry.height_mm = data.height_mm || 0;
       entry.unit = data.unit || "mm";
       if (data.unit && dxfFiles[0] === entry) setUnit(data.unit);
+      // Capture colors for the per-color operation picker
+      if (data.colors_found && data.colors_found.length) {
+        fileColors[entry.file.name] = data.colors_found;
+        renderColorOps();
+      }
       entry.loading = false; renderUI();
     })
     .catch(function(e) { entry.error = e.message; entry.loading = false; renderUI(); });
@@ -1071,6 +1082,9 @@ function clearDebugLog() { debugLog.textContent = "Cleared."; lastDebugLog = "";
 if (window.self !== window.top) {
   var inlineBanner = document.getElementById("betaBanner");
   if (inlineBanner) inlineBanner.style.display = "none";
+  // Parent page already has a File Prep Guide — hide ours when embedded.
+  var fileReqs = document.querySelector(".file-reqs-details");
+  if (fileReqs) fileReqs.style.display = "none";
 }
 fetch("/api/defaults").then(function(r){return r.json();}).then(function(d) {
   $("s_rapid_speed").value=d.rapid_speed; $("s_cutting_accel").value=d.cutting_accel;
