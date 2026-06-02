@@ -1,10 +1,8 @@
 """Laser Job Time Estimation Tool.
 
 Batch-processes DXF files with color-based speed assignments,
-generates G-code, and estimates cut times via a Duet 2 controller
-or offline calculation.
+generates G-code, and estimates cut times offline.
 """
 
-from laser_time_tool.cli import estimate_folder
-
-__all__ = ["estimate_folder"]
+# Lazy CLI import — only available when the cli module is present
+# (it's not bundled for the public Render deployme
