@@ -994,29 +994,51 @@ function renderResults(data) {
     return '<tr><td>' + r.stem + ((r.engrave_seconds || 0) > 0 ? ' <span style="color:var(--text-dim);font-size:10px">engrave ' + (r.engrave_area_mm2/100).toFixed(1) + ' cm2</span>' : '') + '</td><td class="r">' + r.entities + '</td><td class="r">$' + r.cost.toFixed(2) + '</td></tr>';
   }).join("");
 
-  // Footer — clean cost breakdown
+  // Footer — explicit cost breakdown so customers see the math
+  var totalSec = summary.total_seconds || 0;
+  var rate     = summary.rate || 2.10;
+  var totalSecScaled = totalSec * qty;
+  // Format mm:ss / h:mm:ss
+  function fmtT(s) {
+    s = Math.max(0, Math.round(s));
+    if (s < 60) return s + 's';
+    var m = Math.floor(s/60), r = s%60;
+    if (m < 60) return m + 'm ' + (r<10?'0':'') + r + 's';
+    var h = Math.floor(m/60), rm = m%60;
+    return h + 'h ' + (rm<10?'0':'') + rm + 'm';
+  }
   var footHtml = '';
 
-  // If qty > 1, show unit price
+  // Per-piece run time + rate
+  footHtml += '<tr><td>Run time</td><td class="r">' + fmtT(totalSec) + ' / piece</td><td></td></tr>';
   if (qty > 1) {
-    footHtml += '<tr><td>Unit price</td><td class="r">' + qty + 'x</td><td class="r">$' + unitCost.toFixed(2) + '</td></tr>';
+    footHtml += '<tr><td>Quantity</td><td class="r">' + qty + 'x</td><td class="r">' + fmtT(totalSecScaled) + ' total</td></tr>';
+  }
+  footHtml += '<tr><td>Rate</td><td class="r">$' + rate.toFixed(2) + '/min</td><td></td></tr>';
+
+  // Subtotal BEFORE minimum check
+  footHtml += '<tr><td>Cut subtotal</td><td></td><td class="r">$' + scaledCost.toFixed(2) + '</td></tr>';
+
+  // Show minimum line and the reason if applied
+  if (jobBelowMin) {
+    footHtml += '<tr><td colspan="3" style="background:rgba(245,158,11,0.08);color:var(--yellow);font-size:11px;padding:6px 8px;line-height:1.4;">'
+              + 'Cut time is short ($' + scaledCost.toFixed(2) + '), so the <strong>$' + minimum.toFixed(0) + ' job minimum</strong> applies. '
+              + 'Larger jobs are billed at the rate above.'
+              + '</td></tr>';
+    footHtml += '<tr><td><strong>Cutting (min applied)</strong></td><td></td><td class="r"><strong>$' + cuttingTotal.toFixed(2) + '</strong></td></tr>';
+  } else {
+    footHtml += '<tr><td><strong>Cutting</strong></td><td></td><td class="r"><strong>$' + cuttingTotal.toFixed(2) + '</strong></td></tr>';
   }
 
-  // Cutting subtotal
-  var minTag = jobBelowMin ? ' <span style="color:var(--yellow);font-size:10px">(min)</span>' : '';
-  footHtml += '<tr><td><strong>Cutting</strong></td><td></td><td class="r"><strong>$' + cuttingTotal.toFixed(2) + '</strong>' + minTag + '</td></tr>';
-
-  // Material line
+  // Material line (only if applicable)
   if (mat.cost > 0) {
     var matLabel = "Material";
     if (mat.coatCost > 0) matLabel += " + Coating";
     footHtml += '<tr><td><strong>' + matLabel + '</strong></td><td></td><td class="r"><strong>$' + mat.cost.toFixed(2) + '</strong></td></tr>';
   }
 
-  // Grand total (only show if there's material cost, otherwise cutting IS the total)
-  if (mat.cost > 0) {
-    footHtml += '<tr style="border-top:2px solid var(--accent)"><td><strong>Total</strong></td><td></td><td class="r" style="font-size:15px"><strong>$' + grandTotal.toFixed(2) + '</strong></td></tr>';
-  }
+  // Grand total row
+  footHtml += '<tr style="border-top:2px solid var(--accent)"><td><strong>Total</strong></td><td></td><td class="r" style="font-size:16px"><strong>$' + grandTotal.toFixed(2) + '</strong></td></tr>';
 
   resultsFoot.innerHTML = footHtml;
 }
