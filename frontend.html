@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>American Laser Co. — Instant Quote</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f1117;
+  --surface2: #222632;
+  --border: #2e3345;
+  --text: #e8eaf0;
+  --text-dim: #8b90a0;
+  --accent: #ff4d2d;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body { font-family: var(--sans); background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; line-height: 1.5; }
+
+/* ── Two columns: preview | sidebar ── */
+.main-layout {
+  display: grid; grid-template-columns: 1fr 300px; height: 100vh;
+}
+
+/* ── LEFT: Preview ── */
+.col-preview {
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+}
+.preview-area {
+  flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+  padding: 12px; overflow: hidden;
+}
+
+/* Drop zone centered in preview */
+.drop-zone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; cursor: pointer; position: relative;
+  border: 3px dashed var(--border); border-radius: 14px;
+  padding: 50px 70px; transition: all 0.2s;
+}
+.drop-zone:hover { border-color: var(--accent); background: rgba(255,77,45,0.04); }
+.drop-zone.dragover { border-color: var(--accent); background: rgba(255,77,45,0.08); }
+.drop-zone h3 { font-size: 20px; font-weight: 600; color: var(--text); }
+.drop-zone p { font-size: 14px; color: var(--text-dim); }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* Preview grid */
+.preview-grid {
+  display: flex; flex-wrap: wrap; gap: 8px; width: 100%; height: 100%;
+  align-content: center; justify-content: center;
+}
+.preview-card {
+  background: white; border-radius: 4px; overflow: hidden; position: relative;
+  flex: 1 1 100%; max-height: 100%; display: flex; align-items: center; justify-content: center;
+}
+.preview-grid.multi .preview-card { flex: 1 1 calc(50% - 4px); }
+.preview-card .preview-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.preview-card .preview-placeholder {
+  width: 100%; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center;
+  background: #1e2130; color: var(--text-dim); font-size: 14px;
+}
+.preview-card .preview-placeholder.loading::after {
+  content: ''; width: 26px; height: 26px;
+  border: 2px solid rgba(255,255,255,0.15); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+.preview-card .remove-btn {
+  position: absolute; top: 5px; right: 5px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(0,0,0,0.6); border: none; color: white;
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s;
+}
+.preview-card:hover .remove-btn { opacity: 1; }
+.preview-card .remove-btn:hover { background: var(--red); }
+
+/* File bar under preview */
+.file-bar {
+  flex-shrink: 0; border-top: 1px solid var(--border);
+  padding: 6px 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.file-bar:empty { display: none; padding: 0; }
+.file-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; background: var(--surface2); border-radius: 5px;
+  font-size: 13px; font-family: var(--mono);
+}
+.file-chip .fdims { color: var(--text-dim); font-size: 12px; }
+.file-chip .fremove {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 15px; padding: 0 2px; margin-left: 2px;
+}
+.file-chip .fremove:hover { color: var(--red); }
+.add-more-btn {
+  padding: 5px 12px; background: none; border: 1px dashed var(--border);
+  border-radius: 5px; color: var(--text-dim); font-size: 13px; cursor: pointer; position: relative;
+}
+.add-more-btn:hover { border-color: var(--accent); color: var(--text); }
+.add-more-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* ── RIGHT: Sidebar — everything stacked ── */
+.col-sidebar {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px; border-left: 1px solid var(--border);
+  overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.sidebar-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--text-dim); font-weight: 600; display: block; margin-bottom: 3px;
+}
+.material-select {
+  width: 100%; padding: 8px 10px;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px;
+  font-size: 13px; font-family: var(--sans); cursor: pointer;
+}
+.material-select:focus { outline: none; border-color: var(--accent); }
+.material-info { font-size: 12px; color: var(--text-dim); font-family: var(--mono); margin-top: -4px; }
+.controls-row { display: flex; gap: 8px; align-items: end; }
+.ctrl-grow { flex: 1; min-width: 0; }
+.qty-input {
+  width: 56px; padding: 8px 4px; text-align: center;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px;
+  font-size: 18px; font-family: var(--mono);
+  -moz-appearance: textfield;
+}
+.qty-input::-webkit-inner-spin-button, .qty-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.qty-input:focus { outline: none; border-color: var(--accent); }
+.qty-btn {
+  width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); font-size: 20px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.qty-btn:hover { border-color: var(--accent); color: var(--accent); }
+.unit-toggle-row { display: flex; gap: 3px; }
+.unit-btn {
+  flex: 1; padding: 6px 8px; font-size: 12px; font-family: var(--mono);
+  border: 1px solid var(--border); border-radius: 4px;
+  background: transparent; color: var(--text-dim); cursor: pointer; text-align: center;
+}
+.unit-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.file-reqs-details { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; }
+.file-reqs-details summary {
+  padding: 8px 10px; font-size: 12px; color: var(--text-dim); cursor: pointer; font-weight: 600;
+}
+.file-reqs-details summary:hover { color: var(--text); }
+.reqs-content {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 2px 10px 8px; font-size: 12px; color: var(--text-dim); line-height: 1.5;
+}
+
+.sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 2px 0; }
+
+.mat-option { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.mat-option input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.mat-option label { font-size: 12px; color: var(--text-dim); cursor: pointer; }
+
+.quote-row { display: flex; gap: 6px; }
+.quote-btn {
+  flex: 1; padding: 12px 8px;
+  background: var(--accent); color: white; border: none;
+  border-radius: 6px; font-size: 15px; font-weight: 700;
+  cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.quote-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.quote-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.quote-btn.running { background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); }
+.admin-btn {
+  padding: 12px 12px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-dim); font-size: 16px; cursor: pointer;
+}
+.admin-btn:hover { border-color: var(--accent); color: var(--accent); }
+.progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; display: none; }
+.progress-bar.active { display: block; }
+.progress-bar.indeterminate .fill { width: 30%; animation: indeterminate 1.5s infinite ease-in-out; }
+.progress-bar .fill { height: 100%; background: var(--accent); width: 0%; border-radius: 2px; }
+@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+
+/* Results */
+.result-stats { display: flex; gap: 6px; }
+.rs {
+  flex: 1; text-align: center; padding: 10px 4px;
+  background: var(--surface2); border-radius: 6px;
+}
+.rs-val { display: block; font-size: 22px; font-weight: 700; font-family: var(--mono); color: var(--text-dim); }
+.rs-val.rs-cost { color: var(--green); }
+.rs-val.rs-files { color: var(--yellow); }
+.rs-big .rs-val { font-size: 28px; }
+.rs-lbl { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.rs-note { font-size: 12px; color: var(--yellow); }
+.rs-table-wrap { overflow-y: visible; }
+.rs-table { width: 100%; border-collapse: collapse; }
+.rs-table thead th {
+  padding: 5px 6px; text-align: left; font-size: 11px; text-transform: uppercase;
+  color: var(--text-dim); font-weight: 600; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg);
+}
+.rs-table thead th.r { text-align: right; }
+.rs-table tbody td { padding: 6px 8px; border-bottom: 1px solid rgba(46,51,69,0.3); font-size: 14px; }
+.rs-table tbody td.r { text-align: right; font-family: var(--mono); }
+.rs-table tbody tr:hover { background: rgba(255,77,45,0.03); }
+.rs-table tfoot td { padding: 6px 8px; font-weight: 700; border-top: 1px solid var(--border); font-size: 14px; }
+.rs-table tfoot td.r { text-align: right; font-family: var(--mono); }
+
+/* Admin panel */
+.admin-panel { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; padding: 0 10px;
+  position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); z-index: 100; border-top: 1px solid var(--border);
+}
+.admin-panel.open { max-height: 60vh; overflow-y: auto; }
+.card { background: #1a1d27; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+.card-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.card-header h2 { font-size: 13px; font-weight: 600; }
+.card-body { padding: 12px; }
+.settings-group { margin-bottom: 14px; }
+.settings-group:last-child { margin-bottom: 0; }
+.settings-group label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); margin-bottom: 5px; font-weight: 600; }
+.settings-group input, .settings-group select { width: 100%; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 13px; }
+.settings-group input:focus { outline: none; border-color: var(--accent); }
+.settings-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.settings-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.settings-hint { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.color-speed-grid { display: grid; grid-template-columns: 90px 1fr 90px 1fr; gap: 6px 10px; align-items: center; }
+.color-label { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.color-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.small-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-dim); padding: 4px 10px; font-size: 11px; cursor: pointer; }
+.small-btn:hover { border-color: var(--accent); color: var(--text); }
+.debug-log { background: #0a0c10; border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-family: var(--mono); font-size: 11.5px; line-height: 1.6; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #9ca3af; }
+.debug-log .log-error { color: var(--red); }
+.debug-log .log-section { color: var(--accent); font-weight: bold; }
+.debug-actions { display: flex; gap: 8px; margin-top: 10px; }
+.debug-actions button { padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface2); color: var(--text-dim); font-size: 12px; cursor: pointer; }
+.debug-actions button:hover { border-color: var(--accent); color: var(--text); }
+.section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 700; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Modal / Dialog styles ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; backdrop-filter: blur(4px);
+}
+.modal-box {
+  background: #1a1d27; border: 1px solid var(--border); border-radius: 12px;
+  padding: 28px 32px; max-width: 440px; width: 90%; text-align: center;
+}
+.modal-box h2 { font-size: 18px; margin-bottom: 10px; color: var(--accent); }
+.modal-box p { font-size: 14px; color: var(--text-dim); line-height: 1.6; margin-bottom: 18px; }
+.modal-box .modal-actions { display: flex; gap: 10px; justify-content: center; }
+.modal-btn {
+  padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.15s;
+}
+.modal-btn.primary { background: var(--accent); color: white; }
+.modal-btn.primary:hover { filter: brightness(1.15); }
+.modal-btn.secondary { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+.modal-btn.secondary:hover { border-color: var(--accent); color: var(--text); }
+
+/* Email prompt */
+.email-row {
+  display: flex; gap: 8px; margin-top: 8px; align-items: stretch;
+}
+.email-input {
+  flex: 1; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text); font-size: 13px; font-family: var(--sans);
+}
+.email-input:focus { outline: none; border-color: var(--accent); }
+.email-send-btn {
+  padding: 8px 14px; background: var(--accent); color: white; border: none;
+  border-radius: 5px; font-size: 13px; font-weight: 600; cursor: pointer;
+  white-space: nowrap;
+}
+.email-send-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.email-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.email-status { font-size: 12px; color: var(--green); margin-top: 4px; display: none; }
+</style>
+</head>
+<body>
+
+<!-- Beta disclaimer banner — required reading for customers using the instant-quote feature -->
+<div id="betaBanner" style="background:#fff8e1;color:#3a2c00;border-bottom:2px solid #f59e0b;padding:10px 16px;font-size:14px;line-height:1.4;text-align:center;">
+  <strong>BETA · Instant Estimate Only.</strong>
+  This number is an automated ballpark to give you a quick sense of pricing.
+  Your <strong>official quote will arrive by email</strong> from
+  <a href="mailto:americanlaserco@gmail.com" style="color:#3a2c00;text-decoration:underline;">americanlaserco@gmail.com</a>
+  once our team confirms material, thickness, and any job-specific details.
+</div>
+
+<div class="main-layout">
+
+  <!-- LEFT: Preview -->
+  <div class="col-preview">
+    <div class="preview-area" id="previewArea">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="dxfInput" multiple accept=".dxf,.ai,.pdf" />
+        <h3>Drop DXF, AI or PDF Files Here</h3>
+        <p>or click to browse</p>
+      </div>
+      <div class="preview-grid" id="previewGrid" style="display:none;"></div>
+    </div>
+    <div class="file-bar" id="fileBar"></div>
+  </div>
+
+  <!-- RIGHT: Everything else -->
+  <div class="col-sidebar">
+    <div>
+      <label class="sidebar-label">Material</label>
+      <select class="material-select" id="materialSelect" onchange="selectMaterial(this.value)">
+        <option value="">Loading...</option>
+      </select>
+      <div class="mat-option">
+        <input type="checkbox" id="ownMaterial" onchange="updateStockInfo()" />
+        <label for="ownMaterial">Customer provides material</label>
+      </div>
+      <div class="mat-option">
+        <input type="checkbox" id="coatingCheck" onchange="updateStockInfo()" />
+        <label for="coatingCheck">Add protective coating (+$4/sqft)</label>
+      </div>
+    </div>
+    <span class="material-info" id="materialInfo" style="display:none;"></span>
+
+    <div class="controls-row">
+      <div>
+        <label class="sidebar-label">Qty</label>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button class="qty-btn" onclick="changeQty(-1)">-</button>
+          <input type="number" class="qty-input" id="qtyInput" value="1" min="1" step="1" />
+          <button class="qty-btn" onclick="changeQty(1)">+</button>
+        </div>
+      </div>
+      <div id="unitRow" style="display:none;">
+        <label class="sidebar-label">&nbsp;</label>
+        <div class="unit-toggle-row">
+          <button class="unit-btn active" id="btnMM" onclick="setUnit('mm')">mm</button>
+          <button class="unit-btn" id="btnIN" onclick="setUnit('in')">in</button>
+        </div>
+      </div>
+    </div>
+
+    <details class="file-reqs-details">
+      <summary>File Prep Guidelines</summary>
+      <div class="reqs-content">
+        <span>DXF, AI and PDF vector files accepted</span>
+        <span>1:1 scale - drawn at final cut size</span>
+        <span>Stroke / line color sets cut speed</span>
+        <span>Convert text to outlines or curves</span>
+        <span>Single-line art - no duplicate or overlapping paths</span>
+        <span>Vector only - no embedded photos or raster images</span>
+        <span>Engrave-color shapes are area-filled - use closed outlines</span>
+      </div>
+    </details>
+
+    <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+    <div class="quote-row">
+      <button class="quote-btn" id="quoteBtn" disabled>Get Quote</button>
+      <button class="admin-btn" onclick="toggleAdmin()" title="Admin">&#9881;</button>
+    </div>
+
+    <hr class="sidebar-divider" />
+
+    <!-- Results -->
+    <div class="result-stats" id="resultsSummary">
+      <div class="rs rs-big"><span class="rs-val rs-cost" id="rCost">--</span><span class="rs-lbl">Cost</span></div>
+      <div class="rs"><span class="rs-val rs-files" id="rFiles">--</span><span class="rs-lbl">Files</span></div>
+    </div>
+    <div class="rs-note" id="rNote"></div>
+    <div class="rs-table-wrap">
+      <table class="rs-table" id="resultsTable">
+        <thead><tr><th>File</th><th class="r">Entities</th><th class="r">Cost</th></tr></thead>
+        <tbody id="resultsBody"></tbody>
+        <tfoot id="resultsFoot"></tfoot>
+      </table>
+    </div>
+    <span id="resultsInfo" style="font-size:13px;color:var(--text-dim);display:block"></span>
+
+    <!-- Email Quote -->
+    <div id="emailSection" style="display:none;">
+      <hr class="sidebar-divider" />
+      <label class="sidebar-label">Email this quote</label>
+      <div class="email-row">
+        <input type="email" class="email-input" id="clientEmail" placeholder="Client email address" />
+        <button class="email-send-btn" id="emailSendBtn" onclick="sendQuoteEmail()">Send</button>
+      </div>
+      <div class="email-status" id="emailStatus"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Admin panel -->
+<div class="admin-panel" id="adminPanel">
+  <div class="card" style="margin-top:10px;">
+    <div class="card-header"><h2>Settings</h2><button class="small-btn" onclick="resetSettings()">Reset</button></div>
+    <div class="card-body">
+      <div class="section-title">Pricing</div>
+      <div class="settings-row-3">
+        <div class="settings-group"><label>Rate ($/min)</label><input type="number" id="s_rate" value="2.10" step="0.10" min="0" /></div>
+        <div class="settings-group"><label>Job Minimum ($)</label><input type="number" id="s_minimum" value="65" step="5" min="0" /></div>
+        <div class="settings-group"><label>Material Override</label><input type="text" id="s_material" value="" placeholder="Uses selected" /></div>
+      </div>
+      <hr class="settings-divider" />
+      <div class="section-title">Speed Overrides</div>
+      <div class="settings-group"><label>Default Speed (mm/s)</label><input type="number" id="s_default_speed" value="100" step="5" min="1" style="max-width:200px" /></div>
+      <div class="settings-group" style="margin-top:14px">
+        <label>Per-Color Speed Overrides (mm/s)</label>
+        <p class="settings-hint">Leave blank to use material preset speeds</p>
+        <div class="color-speed-grid" style="margin-top:8px;">
+          <div class="color-label"><span class="color-dot" style="background:#FF0000"></span> Red</div><input type="number" id="cs_red" placeholder="--" min="1" step="1" />
+          <div class="color-label"><span class="color-dot" style="background:#00FF00"></span> Green</div><input type="number" id="cs_green" placeholder="--" min="1" step="1" />
+          <div class="color-label"><span class="color-dot" style="background:#0000FF"></span> Blue</div><input type="number" id="cs_blue" placeholder="--" min="1" step="1" />
+          <div class="color-label"><span class="color-dot" style="background:#00FFFF"></span> Cyan</div><input type="number" id="cs_cyan" placeholder="--" min="1" step="1" />
+          <div class="color-label"><span class="color-dot" style="background:#FFFF00"></span> Yellow</div><input type="number" id="cs_yellow" placeholder="--" min="1" step="1" />
+          <div class="color-label"><span class="color-dot" style="background:#FF00FF"></span> Magenta</div><input type="number" id="cs_magenta" placeholder="--" min="1" step="1" />
+          <div class="color-label"><span class="color-dot" style="background:#888"></span> White/Blk</div><input type="number" id="cs_white" placeholder="--" min="1" step="1" />
+        </div>
+      </div>
+      <hr class="settings-divider" />
+      <div class="section-title">Engraving (Area Fill)</div>
+      <p class="settings-hint">Shapes in the engrave color are area-filled (raster scan) instead of cut. Defaults below are pending calibration.</p>
+      <div class="settings-row-3" style="margin-top:8px">
+        <div class="settings-group"><label>Engrave Color</label>
+          <select id="s_engrave_color" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px">
+            <option value="">None (cut only)</option>
+            <option value="red">Red</option>
+            <option value="green">Green</option>
+            <option value="blue">Blue</option>
+            <option value="cyan">Cyan</option>
+            <option value="yellow">Yellow</option>
+            <option value="magenta">Magenta</option>
+            <option value="white">White / Black</option>
+          </select>
+        </div>
+        <div class="settings-group"><label>Engrave Speed (mm/s)</label><input type="number" id="s_engrave_speed" value="400" step="10" min="1" /></div>
+        <div class="settings-group"><label>Line Interval (mm)</label><input type="number" id="s_engrave_interval" value="0.1" step="0.01" min="0.01" /></div>
+      </div>
+      <div class="settings-group"><label>Overscan (mm)</label><input type="number" id="s_engrave_overscan" value="0" step="0.5" min="0" style="max-width:200px" /></div>
+      <hr class="settings-divider" />
+      <div class="section-title">Motion Planner</div>
+      <div class="settings-row-3">
+        <div class="settings-group"><label>Rapid Speed</label><input type="number" id="s_rapid_speed" value="300" step="10" min="1" /></div>
+        <div class="settings-group"><label>Cut Accel</label><input type="number" id="s_cutting_accel" value="1200" step="100" min="1" /></div>
+        <div class="settings-group"><label>Rapid Accel</label><input type="number" id="s_rapid_accel" value="2400" step="100" min="1" /></div>
+      </div>
+      <div class="settings-row-3">
+        <div class="settings-group"><label>Junction Dev</label><input type="number" id="s_junction_dev" value="0.006" step="0.001" min="0" /></div>
+        <div class="settings-group"><label>Path Overhead</label><input type="number" id="s_path_overhead" value="0" step="0.01" min="0" /></div>
+        <div class="settings-group"><label>Job Overhead</label><input type="number" id="s_job_overhead" value="0" step="0.5" min="0" /></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Engraving Feedback</h2></div>
+    <div class="card-body">
+      <p class="settings-hint">Log a real machine engrave time. Each measurement re-fits the model, so engrave quotes get more accurate over time.</p>
+      <div class="settings-group" style="margin-top:8px">
+        <label>Design file (DXF or PDF)</label>
+        <input type="file" id="fb_file" accept=".dxf,.pdf,.ai" />
+      </div>
+      <div class="settings-row-3" style="margin-top:8px">
+        <div class="settings-group"><label>Engrave Color</label>
+          <select id="fb_color" style="width:100%;padding:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px">
+            <option value="blue">Blue</option>
+            <option value="red">Red</option>
+            <option value="green">Green</option>
+            <option value="cyan">Cyan</option>
+            <option value="yellow">Yellow</option>
+            <option value="magenta">Magenta</option>
+            <option value="white">White / Black</option>
+          </select>
+        </div>
+        <div class="settings-group"><label>Engrave Speed (mm/s)</label><input type="number" id="fb_speed" value="100" step="10" min="1" /></div>
+        <div class="settings-group"><label>Actual Time (m:ss)</label><input type="text" id="fb_time" placeholder="6:32" /></div>
+      </div>
+      <div class="quote-row" style="margin-top:10px">
+        <button class="small-btn" onclick="logEngraveActual()">Log Measurement</button>
+        <button class="small-btn" onclick="pullLaserTime()">Pull from Laser</button>
+      </div>
+      <div id="fb_status" style="font-size:12px;margin-top:8px;color:var(--text-dim)"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Debug Log</h2></div>
+    <div class="card-body">
+      <div class="debug-log" id="debugLog">Run a quote to see the processing trace.</div>
+      <div class="debug-actions">
+        <button onclick="copyDebugLog()">Copy</button>
+        <button onclick="downloadDebugLog()">Download</button>
+        <button onclick="clearDebugLog()">Clear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var dxfFiles = [];
+var jobFile = null;
+var lastDebugLog = "";
+var materials = {};
+var selectedMaterial = null;
+var dimUnit = "mm";
+var lastQuoteData = null;
+
+// ── Beta Disclaimer ──
+function showBetaDisclaimer() {
+  if (sessionStorage.getItem("betaDismissed")) return;
+  var overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = '<div class="modal-box">'
+    + '<h2>Beta Preview</h2>'
+    + '<p>This quoting tool is currently in <strong>beta</strong>. '
+    + 'All quotes generated are estimates and should be treated as approximations. '
+    + '<strong>Final pricing requires human review</strong> and may differ from the estimate shown here.</p>'
+    + '<div class="modal-actions">'
+    + '<button class="modal-btn primary" onclick="dismissBeta(this)">I Understand</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+}
+function dismissBeta(btn) {
+  sessionStorage.setItem("betaDismissed", "1");
+  btn.closest(".modal-overlay").remove();
+}
+
+function setUnit(u) {
+  dimUnit = u;
+  document.getElementById("btnMM").classList.toggle("active", u === "mm");
+  document.getElementById("btnIN").classList.toggle("active", u === "in");
+  renderFileBar();
+}
+
+var $ = function(id) { return document.getElementById(id); };
+var quoteBtn = $("quoteBtn"), progressBar = $("progressBar"),
+    resultsBody = $("resultsBody"), resultsFoot = $("resultsFoot"),
+    resultsInfo = $("resultsInfo"), debugLog = $("debugLog"),
+    previewGrid = $("previewGrid"), materialSelect = $("materialSelect"),
+    materialInfo = $("materialInfo"), dropZone = $("dropZone"),
+    fileBar = $("fileBar");
+
+function toggleAdmin() {
+  var pin = prompt("Enter admin PIN:");
+  if (pin === "1127") {
+    $("adminPanel").classList.toggle("open");
+  }
+}
+
+function changeQty(delta) {
+  var inp = $("qtyInput");
+  var v = parseInt(inp.value) || 1;
+  v = Math.max(1, v + delta);
+  inp.value = v;
+}
+
+// ── Material Pricing ──
+
+// Maps cutting material keys to stock cost. Materials not listed = no stock cost.
+var STOCK_PRICES = {
+  "3mm_acrylic":   { price: 7.50,  unit: "sqft" },
+  "5mm_acrylic":   { price: 11.50, unit: "sqft" },
+  "6mm_acrylic":   { price: 11.50, unit: "sqft" },
+  "3mm_birch_ply": { price: 3.50,  unit: "sqft" },
+  "6mm_birch_ply": { price: 5.50,  unit: "sqft" },
+  "oil_board":     { price: 4.50,  unit: "sheet", sheet_w: 24, sheet_h: 36 }
+};
+var COATING_PER_SQFT = 4.00;
+
+function getTotalSqft() {
+  var totalSqft = 0;
+  for (var i = 0; i < dxfFiles.length; i++) {
+    var w = dxfFiles[i].width_mm || 0;
+    var h = dxfFiles[i].height_mm || 0;
+    if (w > 0 && h > 0) {
+      var sqft = (w / 25.4) * (h / 25.4) / 144;
+      totalSqft += Math.ceil(sqft);
+    }
+  }
+  return totalSqft;
+}
+
+function getOilBoardSheets(stock) {
+  var sheets = 0;
+  for (var i = 0; i < dxfFiles.length; i++) {
+    var w = (dxfFiles[i].width_mm || 0) / 25.4;
+    var h = (dxfFiles[i].height_mm || 0) / 25.4;
+    if (w > 0 && h > 0) {
+      sheets += Math.ceil(w / stock.sheet_w) * Math.ceil(h / stock.sheet_h);
+    }
+  }
+  return Math.max(sheets, dxfFiles.length > 0 ? 1 : 0);
+}
+
+function calcMaterialCost(qty) {
+  if ($("ownMaterial").checked || dxfFiles.length === 0) return { cost: 0, matCost: 0, coatCost: 0 };
+  var stock = STOCK_PRICES[selectedMaterial];
+  if (!stock) return { cost: 0, matCost: 0, coatCost: 0 };
+
+  var matCost = 0;
+  if (stock.unit === "sheet") {
+    matCost = getOilBoardSheets(stock) * qty * stock.price;
+  } else {
+    matCost = getTotalSqft() * qty * stock.price;
+  }
+
+  var coatCost = 0;
+  if ($("coatingCheck").checked && stock.unit !== "sheet") {
+    coatCost = getTotalSqft() * qty * COATING_PER_SQFT;
+  }
+
+  return { cost: matCost + coatCost, matCost: matCost, coatCost: coatCost };
+}
+
+function updateStockInfo() {
+  // no-op now, pricing shown in results only
+}
+
+// ── File handling ──
+
+$("dxfInput").addEventListener("change", function(e) { addFiles(Array.from(e.target.files)); e.target.value = ""; });
+dropZone.addEventListener("dragover", function(e) { e.preventDefault(); dropZone.classList.add("dragover"); });
+dropZone.addEventListener("dragleave", function() { dropZone.classList.remove("dragover"); });
+dropZone.addEventListener("drop", function(e) { e.preventDefault(); dropZone.classList.remove("dragover"); addFiles(Array.from(e.dataTransfer.files)); });
+$("previewArea").addEventListener("dragover", function(e) { e.preventDefault(); });
+$("previewArea").addEventListener("drop", function(e) { e.preventDefault(); addFiles(Array.from(e.dataTransfer.files)); });
+
+function addFiles(rawFiles) {
+  for (var i = 0; i < rawFiles.length; i++) {
+    var f = rawFiles[i];
+    var nm = f.name.toLowerCase();
+    if (!(nm.endsWith(".dxf") || nm.endsWith(".ai") || nm.endsWith(".pdf"))) continue;
+    if (dxfFiles.some(function(x) { return x.file.name === f.name; })) continue;
+    var entry = { file: f, preview: null, loading: true };
+    dxfFiles.push(entry);
+    fetchPreview(entry);
+  }
+  renderUI();
+}
+
+function removeFile(idx) { dxfFiles.splice(idx, 1); renderUI(); }
+
+function renderUI() {
+  var hasFiles = dxfFiles.length > 0;
+  dropZone.style.display = hasFiles ? "none" : "flex";
+  previewGrid.style.display = hasFiles ? "flex" : "none";
+  $("unitRow").style.display = hasFiles ? "" : "none";
+  quoteBtn.disabled = !hasFiles;
+  updateStockInfo();
+
+  if (hasFiles) {
+    previewGrid.classList.toggle("multi", dxfFiles.length > 1);
+    previewGrid.innerHTML = dxfFiles.map(function(entry, i) {
+      var name = entry.file.name.replace(/\.(dxf|ai|pdf)$/i, "");
+      var img;
+      if (entry.loading) {
+        img = '<div class="preview-placeholder loading"></div>';
+      } else if (entry.preview) {
+        img = '<img class="preview-img" src="' + entry.preview + '" alt="' + name + '" />';
+      } else {
+        img = '<div class="preview-placeholder">' + (entry.error ? 'Preview failed' : 'No preview') + '</div>';
+      }
+      return '<div class="preview-card"><button class="remove-btn" onclick="removeFile(' + i + ')">&times;</button>' + img + '</div>';
+    }).join("");
+  } else {
+    previewGrid.innerHTML = "";
+  }
+  renderFileBar();
+}
+
+function renderFileBar() {
+  if (!dxfFiles.length) { fileBar.innerHTML = ""; return; }
+  var html = dxfFiles.map(function(entry, i) {
+    var name = entry.file.name.replace(/\.(dxf|ai|pdf)$/i, "");
+    var dims = "";
+    if (entry.width_mm && entry.height_mm) {
+      if (dimUnit === "in") {
+        dims = (entry.width_mm / 25.4).toFixed(2) + " x " + (entry.height_mm / 25.4).toFixed(2) + " in";
+      } else {
+        dims = entry.width_mm + " x " + entry.height_mm + " mm";
+      }
+    }
+    return '<span class="file-chip">' + name + (dims ? ' <span class="fdims">' + dims + '</span>' : '') + '<button class="fremove" onclick="removeFile(' + i + ')">&times;</button></span>';
+  }).join("");
+  html += '<span class="add-more-btn"><input type="file" multiple accept=".dxf,.ai,.pdf" onchange="addFiles(Array.from(this.files));this.value=\'\';" />+ Add</span>';
+  fileBar.innerHTML = html;
+}
+
+function fetchPreview(entry) {
+  var fd = new FormData();
+  fd.append("dxf_file", entry.file);
+  fetch("/api/preview", { method: "POST", body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      entry.preview = data.image || null;
+      entry.error = data.error || null;
+      entry.width_mm = data.width_mm || 0;
+      entry.height_mm = data.height_mm || 0;
+      entry.unit = data.unit || "mm";
+      if (data.unit && dxfFiles[0] === entry) setUnit(data.unit);
+      entry.loading = false; renderUI();
+    })
+    .catch(function(e) { entry.error = e.message; entry.loading = false; renderUI(); });
+}
+
+// ── Materials ──
+
+function loadMaterials() {
+  fetch("/api/materials").then(function(r) { return r.json(); }).then(function(data) {
+    materials = data; renderMaterials();
+    var keys = Object.keys(materials);
+    if (keys.length) selectMaterial(keys[0]);
+  }).catch(function() { materialSelect.innerHTML = '<option value="">Failed to load</option>'; });
+}
+
+function renderMaterials() {
+  materialSelect.innerHTML = Object.entries(materials).map(function(p) {
+    var k = p[0], m = p[1];
+    return '<option value="' + k + '"' + (selectedMaterial === k ? ' selected' : '') + '>' + m.name + '</option>';
+  }).join("");
+}
+
+function selectMaterial(key) {
+  selectedMaterial = key;
+  var m = materials[key];
+  materialInfo.textContent = "";
+  materialSelect.value = key;
+}
+
+// ── Settings ──
+
+function gatherSettings() {
+  var cs = {};
+  var cols = ["red","green","blue","cyan","yellow","magenta","white"];
+  for (var i = 0; i < cols.length; i++) { var v = $("cs_" + cols[i]).value; if (v && parseFloat(v) > 0) cs[cols[i]] = parseFloat(v); }
+  var matLabel = $("s_material").value;
+  var defaultSpeed = parseFloat($("s_default_speed").value) || 100;
+  if (selectedMaterial && materials[selectedMaterial]) {
+    var m = materials[selectedMaterial]; defaultSpeed = m.cut_speed;
+    if (!matLabel) matLabel = m.name;
+  }
+  return {
+    rate: parseFloat($("s_rate").value) || 2.10, minimum: parseFloat($("s_minimum").value) || 65,
+    material: matLabel, default_speed: defaultSpeed,
+    rapid_speed: parseFloat($("s_rapid_speed").value) || 300,
+    cutting_accel: parseFloat($("s_cutting_accel").value) || 1200,
+    rapid_accel: parseFloat($("s_rapid_accel").value) || 2400,
+    junction_deviation: parseFloat($("s_junction_dev").value) || 0.006,
+    path_overhead: parseFloat($("s_path_overhead").value) || 0,
+    job_overhead: parseFloat($("s_job_overhead").value) || 0,
+    engrave_color: $("s_engrave_color").value,
+    engrave_speed: parseFloat($("s_engrave_speed").value) || 400,
+    engrave_interval: parseFloat($("s_engrave_interval").value) || 0.1,
+    engrave_overscan: parseFloat($("s_engrave_overscan").value) || 4,
+    color_speeds: cs, quantity: parseInt($("qtyInput").value) || 1,
+  };
+}
+
+function resetSettings() {
+  $("s_rate").value=2.10; $("s_minimum").value=65; $("s_material").value=""; $("s_default_speed").value=100;
+  $("s_rapid_speed").value=300; $("s_cutting_accel").value=1200; $("s_rapid_accel").value=2400;
+  $("s_junction_dev").value=0.006; $("s_path_overhead").value=0; $("s_job_overhead").value=0;
+  var cols = ["red","green","blue","cyan","yellow","magenta","white"];
+  for (var i = 0; i < cols.length; i++) $("cs_" + cols[i]).value = "";
+  $("s_engrave_color").value=""; $("s_engrave_speed").value=400;
+  $("s_engrave_interval").value=0.1; $("s_engrave_overscan").value=0;
+}
+
+// ── Quote ──
+
+quoteBtn.addEventListener("click", confirmAndQuote);
+
+function confirmAndQuote() {
+  if (!dxfFiles.length) return;
+  var fileNames = dxfFiles.map(function(e) { return e.file.name; }).join(", ");
+  var overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = '<div class="modal-box">'
+    + '<h2>Confirm Submission</h2>'
+    + '<p>You are submitting <strong>' + dxfFiles.length + ' file' + (dxfFiles.length > 1 ? 's' : '') + '</strong> for quoting:<br>'
+    + '<span style="font-family:var(--mono);font-size:12px;color:var(--text)">' + fileNames + '</span></p>'
+    + '<p style="font-size:13px">I confirm that my files are correctly prepared per the file prep guidelines (1:1 scale, proper colors, no hidden objects).</p>'
+    + '<div class="modal-actions">'
+    + '<button class="modal-btn secondary" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button>'
+    + '<button class="modal-btn primary" onclick="this.closest(\'.modal-overlay\').remove();runQuote()">Confirm &amp; Get Quote</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+}
+
+function runQuote() {
+  if (!dxfFiles.length) return;
+  quoteBtn.disabled = true; quoteBtn.classList.add("running");
+  quoteBtn.innerHTML = '<span class="spinner"></span> Processing...';
+  progressBar.classList.add("active", "indeterminate");
+  debugLog.textContent = "Running...\n";
+  $("emailSection").style.display = "none";
+
+  var fd = new FormData();
+  for (var i = 0; i < dxfFiles.length; i++) fd.append("dxf_files[]", dxfFiles[i].file);
+  if (jobFile) fd.append("job_txt", jobFile);
+  fd.append("settings", JSON.stringify(gatherSettings()));
+
+  fetch("/api/quote", { method: "POST", body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      lastDebugLog = data.debug_log || ""; renderDebugLog(lastDebugLog);
+      if (data.error) { alert("Quote failed: " + data.error); return; }
+      lastQuoteData = data;
+      renderResults(data);
+      showEmailPrompt();
+    })
+    .catch(function(err) { debugLog.textContent += "\nFATAL: " + err.message; alert("Error: " + err.message); })
+    .finally(function() {
+      quoteBtn.disabled = false; quoteBtn.classList.remove("running");
+      quoteBtn.innerHTML = "Get Quote"; progressBar.classList.remove("active", "indeterminate");
+    });
+}
+
+// ── Email Quote ──
+function showEmailPrompt() {
+  $("emailSection").style.display = "block";
+  $("emailStatus").style.display = "none";
+  $("emailSendBtn").disabled = false;
+  $("emailSendBtn").textContent = "Send";
+}
+
+function sendQuoteEmail() {
+  var clientEmail = $("clientEmail").value.trim();
+  if (!clientEmail || !clientEmail.includes("@")) {
+    $("emailStatus").textContent = "Please enter a valid email address.";
+    $("emailStatus").style.color = "var(--red)";
+    $("emailStatus").style.display = "block";
+    return;
+  }
+  if (!lastQuoteData) return;
+
+  $("emailSendBtn").disabled = true;
+  $("emailSendBtn").textContent = "Sending...";
+
+  var qty = parseInt($("qtyInput").value) || 1;
+  var mat = calcMaterialCost(qty);
+  var unitCost = lastQuoteData.summary.unit_cost;
+  var minimum = lastQuoteData.summary.minimum;
+  var scaledCost = unitCost * qty;
+  var cuttingTotal = Math.max(scaledCost, minimum);
+  var grandTotal = cuttingTotal + mat.cost;
+
+  fetch("/api/email-quote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_email: clientEmail,
+      quote_data: lastQuoteData,
+      quantity: qty,
+      cutting_total: cuttingTotal,
+      material_cost: mat.cost,
+      grand_total: grandTotal,
+      material_name: selectedMaterial ? (materials[selectedMaterial] || {}).name || "" : "",
+      own_material: $("ownMaterial").checked,
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      $("emailStatus").textContent = "Quote sent to " + clientEmail + " and americanlaserco@gmail.com";
+      $("emailStatus").style.color = "var(--green)";
+    } else {
+      $("emailStatus").textContent = "Failed: " + (data.error || "Unknown error");
+      $("emailStatus").style.color = "var(--red)";
+    }
+    $("emailStatus").style.display = "block";
+    $("emailSendBtn").disabled = false;
+    $("emailSendBtn").textContent = "Send";
+  })
+  .catch(function(err) {
+    $("emailStatus").textContent = "Error: " + err.message;
+    $("emailStatus").style.color = "var(--red)";
+    $("emailStatus").style.display = "block";
+    $("emailSendBtn").disabled = false;
+    $("emailSendBtn").textContent = "Send";
+  });
+}
+
+// ── Results ──
+
+function renderResults(data) {
+  var results = data.results, summary = data.summary;
+  var qty = parseInt($("qtyInput").value) || 1;
+  var unitCost = summary.unit_cost;
+  var minimum = summary.minimum;
+
+  // Cutting: (unit cost * qty) or job minimum, whichever is greater
+  var scaledCost = unitCost * qty;
+  var cuttingTotal = Math.max(scaledCost, minimum);
+  var jobBelowMin = scaledCost < minimum;
+
+  // Material cost
+  var mat = calcMaterialCost(qty);
+  var grandTotal = cuttingTotal + mat.cost;
+
+  // Big stat box
+  $("rCost").innerHTML = "$" + grandTotal.toFixed(2);
+  $("rCost").style.color = "var(--green)";
+  $("rFiles").textContent = summary.total_files + (qty > 1 ? " x" + qty : "");
+  $("rFiles").style.color = "var(--yellow)";
+
+  // Note
+  if (jobBelowMin) {
+    $("rNote").textContent = "$" + minimum.toFixed(0) + " job minimum applied";
+  } else {
+    $("rNote").textContent = "";
+  }
+  resultsInfo.textContent = summary.material || "";
+
+  // Per-file rows
+  resultsBody.innerHTML = results.map(function(r) {
+    if (r.status === "error") return '<tr><td>' + r.filename + '</td><td class="r" colspan="2" style="color:var(--red)">ERR</td></tr>';
+    return '<tr><td>' + r.stem + ((r.engrave_seconds || 0) > 0 ? ' <span style="color:var(--text-dim);font-size:10px">engrave ' + (r.engrave_area_mm2/100).toFixed(1) + ' cm2</span>' : '') + '</td><td class="r">' + r.entities + '</td><td class="r">$' + r.cost.toFixed(2) + '</td></tr>';
+  }).join("");
+
+  // Footer — clean cost breakdown
+  var footHtml = '';
+
+  // If qty > 1, show unit price
+  if (qty > 1) {
+    footHtml += '<tr><td>Unit price</td><td class="r">' + qty + 'x</td><td class="r">$' + unitCost.toFixed(2) + '</td></tr>';
+  }
+
+  // Cutting subtotal
+  var minTag = jobBelowMin ? ' <span style="color:var(--yellow);font-size:10px">(min)</span>' : '';
+  footHtml += '<tr><td><strong>Cutting</strong></td><td></td><td class="r"><strong>$' + cuttingTotal.toFixed(2) + '</strong>' + minTag + '</td></tr>';
+
+  // Material line
+  if (mat.cost > 0) {
+    var matLabel = "Material";
+    if (mat.coatCost > 0) matLabel += " + Coating";
+    footHtml += '<tr><td><strong>' + matLabel + '</strong></td><td></td><td class="r"><strong>$' + mat.cost.toFixed(2) + '</strong></td></tr>';
+  }
+
+  // Grand total (only show if there's material cost, otherwise cutting IS the total)
+  if (mat.cost > 0) {
+    footHtml += '<tr style="border-top:2px solid var(--accent)"><td><strong>Total</strong></td><td></td><td class="r" style="font-size:15px"><strong>$' + grandTotal.toFixed(2) + '</strong></td></tr>';
+  }
+
+  resultsFoot.innerHTML = footHtml;
+}
+
+// ── Debug ──
+
+function renderDebugLog(text) {
+  debugLog.innerHTML = text.split("\n").map(function(line) {
+    if (line.indexOf("[ERROR]") >= 0) return '<span class="log-error">' + esc(line) + '</span>';
+    if (/[=~]/.test(line)) return '<span class="log-section">' + esc(line) + '</span>';
+    return esc(line);
+  }).join("\n");
+  debugLog.scrollTop = debugLog.scrollHeight;
+}
+function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function copyDebugLog() { navigator.clipboard.writeText(lastDebugLog || debugLog.textContent); }
+function downloadDebugLog() {
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lastDebugLog||debugLog.textContent],{type:"text/plain"}));
+  a.download = "debug_" + new Date().toISOString().slice(0,19).replace(/:/g,"-") + ".txt"; a.click();
+}
+function clearDebugLog() { debugLog.textContent = "Cleared."; lastDebugLog = ""; }
+
+// ── Init ──
+
+showBetaDisclaimer();
+fetch("/api/defaults").then(function(r){return r.json();}).then(function(d) {
+  $("s_rapid_speed").value=d.rapid_speed; $("s_cutting_accel").value=d.cutting_accel;
+  $("s_rapid_accel").value=d.rapid_accel; $("s_junction_dev").value=d.junction_deviation;
+  $("s_path_overhead").value=d.path_overhead; $("s_job_overhead").value=d.job_overhead;
+}).catch(function(){});
+loadMaterials();
+// -- Engraving feedback --
+function fbStatus(msg, kind) {
+  var col = {red:"var(--red)", green:"var(--green)", dim:"var(--text-dim)"}[kind] || "var(--text)";
+  var el = $("fb_status"); el.textContent = msg; el.style.color = col;
+}
+function parseTimeStr(s) {
+  s = (s || "").trim();
+  if (!s) return 0;
+  if (s.indexOf(":") >= 0) {
+    var p = s.split(":"), sec = 0;
+    for (var i = 0; i < p.length; i++) sec = sec * 60 + (parseFloat(p[i]) || 0);
+    return sec;
+  }
+  return parseFloat(s) || 0;
+}
+function logEngraveActual() {
+  var fi = $("fb_file");
+  if (!fi.files || !fi.files[0]) { fbStatus("Choose a design file first.", "red"); return; }
+  var secs = parseTimeStr($("fb_time").value);
+  var speed = parseFloat($("fb_speed").value) || 0;
+  if (secs <= 0 || speed <= 0) { fbStatus("Enter the actual time and engrave speed.", "red"); return; }
+  var fd = new FormData();
+  fd.append("file", fi.files[0]);
+  fd.append("actual_seconds", secs);
+  fd.append("speed", speed);
+  fd.append("engrave_color", $("fb_color").value);
+  fd.append("interval", parseFloat($("s_engrave_interval").value) || 0.1);
+  fbStatus("Logging and re-fitting...", "dim");
+  fetch("/api/log-engrave-actual", { method: "POST", body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        var st = d.stats || {};
+        fbStatus("Logged. " + st.n_measurements + " measurements across " +
+                 st.n_designs + " designs - model error now " + st.model_err_pct + "%.", "green");
+      } else { fbStatus("Failed: " + (d.error || "unknown error"), "red"); }
+    })
+    .catch(function(e

@@ -1,0 +1,50 @@
+{
+  "global": {
+    "accel": 1220.0,
+    "job_overhead": 24.0
+  },
+  "files": {
+    "airplane": {
+      "100": -7.2,
+      "400": 3.6
+    },
+    "acrylicflowerearrings": {
+      "100": -12.3,
+      "400": 29.5
+    },
+    "blossomflowerearrings": {
+      "100": -13.3,
+      "400": -0.4
+    },
+    "catneonsign": {
+      "100": 26.2,
+      "400": -37.9
+    },
+    "bicyclephotoframe": {
+      "100": 30.4,
+      "400": 2.4
+    },
+    "cloudwallnightlight": {
+      "100": 35.3,
+      "400": 22.8
+    },
+    "floralmirror": {
+      "400": -4.2,
+      "100": 60.6
+    },
+    "framelessmirror": {
+      "100": 449.3,
+      "400": 283.3
+    },
+    "indoorplant": {
+      "100": 18.9,
+      "400": -91.6
+    }
+  },
+  "stats": {
+    "n_measurements": 18,
+    "n_designs": 9,
+    "model_err_pct": 4.28,
+    "updated": "2026-05-22 00:21:04"
+  }
+}

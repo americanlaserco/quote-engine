@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bench Calibration · American Laser Co.</title>
+<style>
+:root {
+  --bg: #0f1117; --panel: #181b24; --border: #2a2f3d; --text: #e5e7eb;
+  --muted: #9ca3af; --green: #22c55e; --yellow: #eab308; --red: #ef4444;
+  --blue: #3b82f6; --accent: #14b8a6;
+}
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+       background: var(--bg); color: var(--text); margin: 0; padding: 24px; }
+h1 { margin: 0 0 8px 0; font-size: 22px; }
+h2 { margin: 24px 0 12px 0; font-size: 16px; color: var(--muted);
+     text-transform: uppercase; letter-spacing: 0.5px; }
+a { color: var(--blue); }
+.panel { background: var(--panel); border: 1px solid var(--border);
+         border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);
+       background: var(--panel); color: var(--text); cursor: pointer; font-size: 14px; }
+.btn:hover { background: #1f2330; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+.btn-primary:hover { background: #0f9b8b; }
+.btn-danger { background: var(--red); border-color: var(--red); }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
+       font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.tag.green { background: rgba(34,197,94,0.2); color: var(--green); }
+.tag.yellow { background: rgba(234,179,8,0.2); color: var(--yellow); }
+.tag.red { background: rgba(239,68,68,0.2); color: var(--red); }
+.tag.gray { background: rgba(156,163,175,0.2); color: var(--muted); }
+.tag.blue { background: rgba(59,130,246,0.2); color: var(--blue); }
+.kv { display: grid; grid-template-columns: 160px 1fr; gap: 8px 16px; font-size: 14px; }
+.kv > div:nth-child(odd) { color: var(--muted); }
+.bar-track { background: var(--border); height: 12px; border-radius: 6px; overflow: hidden; }
+.bar-fill { background: var(--accent); height: 100%; transition: width 0.3s; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: #0f1117; font-weight: 600; color: var(--muted); font-size: 11px;
+     text-transform: uppercase; letter-spacing: 0.5px; position: sticky; top: 0; }
+.scroll { max-height: 320px; overflow-y: auto; border: 1px solid var(--border);
+          border-radius: 6px; }
+.cb-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0; }
+.cb-row label { display: flex; align-items: center; gap: 4px; font-size: 14px; }
+.muted { color: var(--muted); font-size: 13px; }
+.error-row { color: var(--red); }
+.match-cell.green { color: var(--green); font-weight: 600; }
+.match-cell.yellow { color: var(--yellow); }
+.match-cell.red { color: var(--red); font-weight: 600; }
+code { background: var(--border); padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Bench Calibration</h1>
+<p class="muted">Drive a bench Ruida controller through the test files. Each prediction comes back from the controller's own internal time model — so when you merge, the engine quotes those files at the controller's exact number.
+<a href="/">← Back to Quote Engine</a></p>
+
+<!-- Controller status -->
+<div class="panel">
+  <div class="row" style="justify-content: space-between;">
+    <h2 style="margin:0;">Controller</h2>
+    <div class="row">
+      <button class="btn" onclick="discover()">Discover</button>
+      <button class="btn" onclick="discover(true)" title="Use a mock controller (sandbox/UI test)">Mock</button>
+    </div>
+  </div>
+  <div id="connStatus" class="muted" style="margin-top:8px;">Click Discover to find a connected Ruida.</div>
+</div>
+
+<!-- Job config + start -->
+<div class="panel" id="configPanel">
+  <h2>Run Configuration</h2>
+  <div style="margin-bottom: 8px;"><strong>Test folders</strong></div>
+  <div class="cb-row" id="foldersChecks">
+    <label><input type="checkbox" value="test files" checked> test files/</label>
+    <label><input type="checkbox" value="../convertedfiles" checked> convertedfiles/</label>
+    <label><input type="checkbox" value="../final test files copy" checked> final test files copy/</label>
+  </div>
+  <div style="margin: 12px 0 8px 0;"><strong>Speeds (mm/s)</strong></div>
+  <div class="cb-row" id="speedsChecks">
+    <label><input type="checkbox" value="11" checked> 11 (¼" acrylic)</label>
+    <label><input type="checkbox" value="16" checked> 16 (⅛" acrylic / ¼" wood)</label>
+    <label><input type="checkbox" value="20" checked> 20 (⅛" wood)</label>
+    <label><input type="checkbox" value="100" checked> 100 (paper)</label>
+  </div>
+  <div class="cb-row" style="margin: 12px 0;">
+    <label><input type="checkbox" id="forceCheck"> Re-run files already calibrated</label>
+  </div>
+  <div class="row">
+    <button class="btn btn-primary" id="startBtn" onclick="startJob()" disabled>Start Calibration</button>
+    <button class="btn btn-danger" id="stopBtn" onclick="stopJob()" style="display:none;">Stop</button>
+  </div>
+</div>
+
+<!-- Live progress -->
+<div class="panel" id="progressPanel" style="display: none;">
+  <div class="row" style="justify-content: space-between; margin-bottom: 8px;">
+    <h2 style="margin:0;">Progress</h2>
+    <span id="progStatus" class="tag gray">Idle</span>
+  </div>
+  <div class="bar-track"><div class="bar-fill" id="progBar" style="width: 0%;"></div></div>
+  <div class="kv" style="margin-top: 12px;">
+    <div>Done</div>          <div id="kvDone">0 / 0</div>
+    <div>Current file</div>  <div id="kvCurrent">—</div>
+    <div>Elapsed</div>       <div id="kvElapsed">0s</div>
+    <div>Errors</div>        <div id="kvErrors">0</div>
+  </div>
+</div>
+
+<!-- Live accuracy summary -->
+<div class="panel" id="accPanel" style="display: none;">
+  <h2>Accuracy vs Current Engine</h2>
+  <div class="kv">
+    <div>Files compared</div>  <div id="accCount">0</div>
+    <div>Mean error</div>      <div id="accMean">—</div>
+    <div>Mean abs error</div>  <div id="accAbs">—</div>
+    <div>Under-quotes</div>    <div id="accUnders">0</div>
+  </div>
+</div>
+
+<!-- Results table -->
+<div class="panel" id="resultsPanel" style="display: none;">
+  <h2>Results</h2>
+  <div class="scroll">
+    <table id="resultsTable">
+      <thead><tr>
+        <th>File</th><th>Fmt</th><th>Speed</th><th>Controller</th>
+        <th>Engine</th><th>Δ</th><th>Match</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Errors -->
+<div class="panel" id="errorsPanel" style="display: none;">
+  <h2>Errors</h2>
+  <div class="scroll">
+    <table id="errorsTable">
+      <thead><tr><th>File</th><th>Speed</th><th>Reason</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Merge -->
+<div class="panel" id="mergePanel" style="display: none;">
+  <h2>Merge Into Engine</h2>
+  <p class="muted">Fold the controller's predictions into <code>calibration_table.json</code>. After merging, any customer who uploads one of these files gets the controller's exact number as their quote.</p>
+  <button class="btn btn-primary" onclick="mergeResults()">Merge results into calibration table</button>
+  <div id="mergeStatus" class="muted" style="margin-top: 8px;"></div>
+</div>
+
+<script>
+let pollTimer = null;
+let mockMode = false;
+let currentEngineQuotes = {};  // (stem, speed) → engine's current quote
+
+function $(id) { return document.getElementById(id); }
+function fmtSec(s) {
+  s = Math.round(s);
+  if (s < 60) return s + 's';
+  return Math.floor(s/60) + 'm ' + (s%60).toString().padStart(2,'0') + 's';
+}
+
+async function discover(asMock) {
+  $('connStatus').textContent = 'Scanning…';
+  const url = '/api/bench-calibrate/discover' + (asMock ? '?mock=1' : '');
+  const r = await fetch(url, { method: 'POST' });
+  const j = await r.json();
+  if (j.found) {
+    mockMode = j.connection.kind === 'mock';
+    const tag = mockMode ? '<span class="tag yellow">MOCK</span>' : '<span class="tag green">CONNECTED</span>';
+    let desc = j.connection.kind === 'serial'
+      ? `Serial port <code>${j.connection.port}</code>` + (j.connection.desc ? ` — ${j.connection.desc}` : '')
+      : j.connection.kind === 'udp'
+        ? `UDP <code>${j.connection.ip}</code>`
+        : 'Mock controller (returns simulated times)';
+    $('connStatus').innerHTML = `${tag} ${desc}<br><span class="muted">Card ID: ${j.connection.card_id}</span>`;
+    $('startBtn').disabled = false;
+  } else {
+    $('connStatus').innerHTML = `<span class="tag red">NOT FOUND</span> ${j.hint || ''}`;
+    $('startBtn').disabled = true;
+  }
+}
+
+async function startJob() {
+  const folders = Array.from(document.querySelectorAll('#foldersChecks input:checked'))
+    .map(el => el.value);
+  const speeds = Array.from(document.querySelectorAll('#speedsChecks input:checked'))
+    .map(el => parseFloat(el.value));
+  if (!folders.length || !speeds.length) {
+    alert('Pick at least one folder and one speed.'); return;
+  }
+  const body = { folders, speeds, force: $('forceCheck').checked };
+  const r = await fetch('/api/bench-calibrate/start', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  if (!j.started) { alert('Could not start: ' + (j.error || 'unknown')); return; }
+  $('startBtn').style.display = 'none';
+  $('stopBtn').style.display = 'inline-block';
+  $('progressPanel').style.display = 'block';
+  $('accPanel').style.display = 'block';
+  $('resultsPanel').style.display = 'block';
+  $('errorsPanel').style.display = 'block';
+  startPolling();
+}
+
+async function stopJob() {
+  await fetch('/api/bench-calibrate/stop', { method: 'POST' });
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refreshStatus, 1000);
+  refreshStatus();
+}
+
+function classifyDelta(controllerS, engineS) {
+  if (engineS == null) return ['—', 'gray'];
+  const delta = engineS - controllerS;
+  const pct = (delta / controllerS) * 100;
+  let cls = 'green';
+  if (pct < -3) cls = 'red';
+  else if (Math.abs(pct) > 3) cls = 'yellow';
+  const sign = delta >= 0 ? '+' : '';
+  return [`${sign}${delta.toFixed(1)}s (${sign}${pct.toFixed(1)}%)`, cls];
+}
+
+async function getEngineQuote(stem, speed) {
+  // Cache per session — fetch the engine's current calibrated quote for this stem+speed
+  const key = `${stem}|${speed}`;
+  if (key in currentEngineQuotes) return currentEngineQuotes[key];
+  try {
+    const r = await fetch(`/api/engine-quote?stem=${encodeURIComponent(stem)}&speed=${speed}`);
+    const j = await r.json();
+    currentEngineQuotes[key] = j.quote_seconds;
+    return j.quote_seconds;
+  } catch (e) {
+    currentEngineQuotes[key] = null;
+    return null;
+  }
+}
+
+async function refreshStatus() {
+  const r = await fetch('/api/bench-calibrate/status');
+  const s = await r.json();
+  // Status tag
+  const statusEl = $('progStatus');
+  statusEl.textContent = s.status;
+  statusEl.className = 'tag ' + ({
+    'running': 'blue', 'finished': 'green', 'stopped': 'yellow',
+    'error': 'red', 'idle': 'gray'
+  }[s.status] || 'gray');
+
+  // KV
+  const total = s.progress_total || 0;
+  const done = s.progress_done || 0;
+  $('kvDone').textContent = `${done} / ${total}`;
+  $('kvCurrent').textContent = s.current
+    ? `${s.current.file} (${s.current.ext}) @ ${s.current.speed} mm/s`
+    : '—';
+  $('kvElapsed').textContent = fmtSec(s.elapsed_s);
+  $('kvErrors').textContent = s.all_error_count || 0;
+  const pct = total > 0 ? (100 * done / total) : 0;
+  $('progBar').style.width = pct.toFixed(1) + '%';
+
+  // Stop polling when run is done
+  if (s.status !== 'running' && s.status !== 'idle') {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    $('stopBtn').style.display = 'none';
+    $('startBtn').style.display = 'inline-block';
+    $('mergePanel').style.display = 'block';
+  }
+
+  // Refresh full results table from server
+  await refreshResults();
+
+  // Errors
+  const eb = $('errorsTable').querySelector('tbody');
+  eb.innerHTML = '';
+  (s.recent_errors || []).forEach(e => {
+    const tr = document.createElement('tr');
+    tr.className = 'error-row';
+    tr.innerHTML = `<td>${e.file}</td><td>${e.speed}</td><td>${e.reason}</td>`;
+    eb.appendChild(tr);
+  });
+}
+
+async function refreshResults() {
+  const r = await fetch('/api/bench-calibrate/results');
+  const j = await r.json();
+  const rows = (j.results || []);
+  // Accuracy summary
+  let okCount = 0; let sumErr = 0; let sumAbs = 0; let unders = 0;
+  const tb = $('resultsTable').querySelector('tbody');
+  tb.innerHTML = '';
+  for (const row of rows.slice().reverse().slice(0, 50)) {
+    const engine = await getEngineQuote(row.file, row.speed);
+    const [deltaStr, deltaCls] = classifyDelta(row.controller_predicted_s, engine);
+    if (engine != null) {
+      okCount++;
+      const pct = (engine - row.controller_predicted_s) / row.controller_predicted_s * 100;
+      sumErr += pct; sumAbs += Math.abs(pct);
+      if (pct < 0) unders++;
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.file}</td>
+      <td>${row.ext.toUpperCase()}</td>
+      <td>${row.speed}</td>
+      <td>${row.controller_predicted_s.toFixed(1)}s</td>
+      <td>${engine != null ? engine.toFixed(1) + 's' : '—'}</td>
+      <td class="match-cell ${deltaCls}">${deltaStr}</td>
+      <td><span class="tag ${deltaCls === 'green' ? 'green' : deltaCls === 'yellow' ? 'yellow' : 'red'}">${deltaCls === 'green' ? '✓' : deltaCls === 'red' ? 'UNDER' : 'WARN'}</span></td>`;
+    tb.appendChild(tr);
+  }
+  if (okCount > 0) {
+    $('accCount').textContent = okCount;
+    $('accMean').textContent  = (sumErr / okCount).toFixed(2) + '%';
+    $('accAbs').textContent   = (sumAbs / okCount).toFixed(2) + '%';
+    $('accUnders').textContent = unders;
+  }
+}
+
+async function mergeResults() {
+  $('mergeStatus').textContent = 'Merging…';
+  const r = await fetch('/api/bench-calibrate/merge', { method: 'POST' });
+  const j = await r.json();
+  if (j.merged) {
+    $('mergeStatus').innerHTML = `<span class="tag green">DONE</span> Added ${j.added}, updated ${j.updated}, skipped ${j.skipped}. Calibration table now has <strong>${j.total_entries}</strong> entries.`;
+  } else {
+    $('mergeStatus').innerHTML = `<span class="tag red">ERROR</span> ${j.error}`;
+  }
+}
+
+// Auto-discover on load
+window.addEventListener('load', () => { discover(); });
+</script>
+</body>
+</html>

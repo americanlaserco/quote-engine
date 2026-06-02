@@ -1,0 +1,32 @@
+# Render Blueprint — describes the public quote engine deployment.
+# When you connect this repo to Render, it reads this file and creates
+# the web service automatically with everything wired up.
+#
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: quote-engine
+    runtime: python
+    plan: starter                # $7/mo — needed for the persistent disk
+    region: oregon               # change to ohio/virginia/frankfurt as preferred
+    branch: main                 # change if your default branch is named differently
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 server:app
+    healthCheckPath: /api/defaults
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GMAIL_APP_PASSWORD
+        sync: false              # set manually in the Render dashboard
+      - key: ADMIN_PIN
+        sync: false              # set manually in the Render dashboard
+      - key: SHOP_RATE
+        value: "2.10"
+      - key: SHOP_MINIMUM
+        value: "65.00"
+    disk:
+      name: calibration-data
+      mountPath: /opt/render/project/src/calibration_data
+      sizeGB: 1
