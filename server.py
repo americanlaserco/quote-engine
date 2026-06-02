@@ -792,4 +792,21 @@ def api_engine_quote():
         csm = {c: speed for c in range(1, 256)}
         cp = parse_dxf(str(dxf), csm)
         ents = sum(len(p) for p in cp.values())
-        cut_mm = sum(path_length(pp) for paths in cp.valu
+        cut_mm = sum(path_length(pp) for paths in cp.values() for pp in paths)
+        raw = estimate_time_offline(cp, csm)
+        est = apply_calibration(raw, stem, speed, num_paths=ents,
+                                total_cut_mm=cut_mm, source_path=str(dxf))
+        return jsonify({"stem": stem, "speed": speed, "quote_seconds": round(est, 1)})
+    except Exception as e:
+        return jsonify({"stem": stem, "speed": speed, "quote_seconds": None,
+                       "error": str(e)})
+
+
+if __name__ == "__main__":
+    import argparse
+    p = argparse.ArgumentParser()
+    p.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))
+    p.add_argument("--host", default="127.0.0.1")
+    args = p.parse_args()
+    log("Starting server on http://%s:%d" % (args.host, args.port))
+    app.run(host=args.host, port=args.port, debug=False, threaded=True)
