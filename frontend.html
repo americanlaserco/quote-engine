@@ -971,10 +971,14 @@ function clearDebugLog() { debugLog.textContent = "Cleared."; lastDebugLog = "";
 
 // ── Init ──
 
-// Inline banner at the top of the page handles the beta disclaimer.
-// The old modal used sessionStorage which throws inside cross-origin
-// iframes (Chrome blocks third-party storage), killing init.
-try { showBetaDisclaimer(); } catch (e) { /* iframe / private mode */ }
+// Beta disclaimer is now the inline banner at the top of the page; the
+// old modal popup was blocking the controls. Disabled entirely.
+// Also: when embedded in an iframe (e.g. on americanlaserco.com), hide
+// the inline banner since the host page provides its own.
+if (window.self !== window.top) {
+  var inlineBanner = document.getElementById("betaBanner");
+  if (inlineBanner) inlineBanner.style.display = "none";
+}
 fetch("/api/defaults").then(function(r){return r.json();}).then(function(d) {
   $("s_rapid_speed").value=d.rapid_speed; $("s_cutting_accel").value=d.cutting_accel;
   $("s_rapid_accel").value=d.rapid_accel; $("s_junction_dev").value=d.junction_deviation;
