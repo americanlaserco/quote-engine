@@ -387,7 +387,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
     <div class="rs-note" id="rNote"></div>
     <div class="rs-table-wrap">
       <table class="rs-table" id="resultsTable">
-        <thead><tr><th>File</th><th class="r">Entities</th><th class="r">Cost</th></tr></thead>
+        <thead><tr><th>File</th><th class="r">Cost</th></tr></thead>
         <tbody id="resultsBody"></tbody>
         <tfoot id="resultsFoot"></tfoot>
       </table>
@@ -1012,8 +1012,8 @@ function renderResults(data) {
 
   // Per-file rows
   resultsBody.innerHTML = results.map(function(r) {
-    if (r.status === "error") return '<tr><td>' + r.filename + '</td><td class="r" colspan="2" style="color:var(--red)">ERR</td></tr>';
-    return '<tr><td>' + r.stem + ((r.engrave_seconds || 0) > 0 ? ' <span style="color:var(--text-dim);font-size:10px">engrave ' + (r.engrave_area_mm2/100).toFixed(1) + ' cm2</span>' : '') + '</td><td class="r">' + r.entities + '</td><td class="r">$' + r.cost.toFixed(2) + '</td></tr>';
+    if (r.status === "error") return '<tr><td>' + r.filename + '</td><td class="r" style="color:var(--red)">ERR</td></tr>';
+    return '<tr><td>' + r.stem + '</td><td class="r">$' + r.cost.toFixed(2) + '</td></tr>';
   }).join("");
 
   // Footer — explicit cost breakdown so customers see exactly what they're charged
@@ -1031,41 +1031,29 @@ function renderResults(data) {
   var minMinutes = (minimum / rate);   // how many minutes of cut the minimum covers
   var footHtml = '';
 
-  // Per-piece line — always show, with quantity math built in
-  footHtml += '<tr><td>Per piece</td><td class="r" style="color:var(--text-dim);font-size:11px;">'
-            + fmtT(totalSec) + ' @ $' + rate.toFixed(2) + '/min'
-            + '</td><td class="r">$' + unitCost.toFixed(2) + '</td></tr>';
+  // Per-piece line — clean: just the price (no internal time/rate exposed)
+  footHtml += '<tr><td>Per piece</td><td class="r">$' + unitCost.toFixed(2) + '</td></tr>';
 
   if (qty > 1) {
-    footHtml += '<tr><td>Quantity</td><td class="r" style="color:var(--text-dim);font-size:11px;">'
-              + qty + '× · ' + fmtT(totalSecScaled) + ' total'
-              + '</td><td class="r">$' + scaledCost.toFixed(2) + '</td></tr>';
+    footHtml += '<tr><td>Quantity <span style="color:var(--text-dim);font-size:11px;">'+qty+'×</span></td><td class="r">$' + scaledCost.toFixed(2) + '</td></tr>';
   }
 
   // Minimum — show explicitly whether below or above, in plain language
   if (jobBelowMin) {
-    footHtml += '<tr><td colspan="3" style="background:rgba(245,158,11,0.12);border-left:3px solid var(--yellow);color:var(--text);font-size:12px;padding:8px 10px;line-height:1.5;">'
-              + '<strong style="color:var(--yellow);">$' + minimum.toFixed(0) + ' job minimum applies</strong><br>'
-              + '<span style="color:var(--text-dim);">Your '
-              + (qty > 1 ? qty + ' piece' + (qty>1?'s':'') + ' totaling ' + fmtT(totalSecScaled) : fmtT(totalSec))
-              + ' would price out at $' + scaledCost.toFixed(2) + '. '
-              + 'Anything under ≋ ' + fmtT(minMinutes * 60) + ' of cut time bills at the $'
-              + minimum.toFixed(0) + ' minimum.</span>'
-              + '</td></tr>';
-    footHtml += '<tr><td><strong>Cutting</strong></td><td class="r" style="color:var(--yellow);font-size:11px;">min applied</td><td class="r"><strong>$' + cuttingTotal.toFixed(2) + '</strong></td></tr>';
+    footHtml += '<tr><td><strong>Cutting</strong> <span style="color:var(--yellow);font-size:11px;">min applied</span></td><td class="r"><strong>$' + cuttingTotal.toFixed(2) + '</strong></td></tr>';
   } else {
-    footHtml += '<tr><td><strong>Cutting</strong></td><td></td><td class="r"><strong>$' + cuttingTotal.toFixed(2) + '</strong></td></tr>';
+    footHtml += '<tr><td><strong>Cutting</strong></td><td class="r"><strong>$' + cuttingTotal.toFixed(2) + '</strong></td></tr>';
   }
 
   // Material line (only if applicable)
   if (mat.cost > 0) {
     var matLabel = "Material";
     if (mat.coatCost > 0) matLabel += " + Coating";
-    footHtml += '<tr><td><strong>' + matLabel + '</strong></td><td></td><td class="r"><strong>$' + mat.cost.toFixed(2) + '</strong></td></tr>';
+    footHtml += '<tr><td><strong>' + matLabel + '</strong></td><td class="r"><strong>$' + mat.cost.toFixed(2) + '</strong></td></tr>';
   }
 
   // Grand total row
-  footHtml += '<tr style="border-top:2px solid var(--accent)"><td><strong>Total</strong></td><td></td><td class="r" style="font-size:17px;font-weight:700;color:var(--green);"><strong>$' + grandTotal.toFixed(2) + '</strong></td></tr>';
+  footHtml += '<tr style="border-top:2px solid var(--accent)"><td><strong>Total</strong></td><td class="r" style="font-size:17px;font-weight:700;color:var(--green);"><strong>$' + grandTotal.toFixed(2) + '</strong></td></tr>';
 
   resultsFoot.innerHTML = footHtml;
 }
