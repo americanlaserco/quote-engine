@@ -173,8 +173,15 @@ def preview_dxf():
 
         with open(png_path, "rb") as pf:
             b64 = base64.b64encode(pf.read()).decode("utf-8")
+        # Detect the colors the file uses so the frontend can show a per-color
+        # operation picker (Cut / Score / Engrave). Lenient: any ACI 1-255 OK.
+        try:
+            colors_found = sorted(_scan_vector_colors([src_path]))
+        except Exception:
+            colors_found = []
         return jsonify({"image": "data:image/png;base64," + b64, "filename": f.filename,
-            "width_mm": width_mm, "height_mm": height_mm, "unit": native_unit})
+            "width_mm": width_mm, "height_mm": height_mm, "unit": native_unit,
+            "colors_found": list(colors_found)})
     except Exception as e:
         return jsonify({"error": str(e), "filename": f.filename}), 500
     finally:

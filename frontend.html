@@ -509,6 +509,9 @@ var materials = {};
 var selectedMaterial = null;
 var dimUnit = "mm";
 var lastQuoteData = null;
+var fileColors = {};  // {filename: [aci, aci]}
+var colorOps = {};  // {aci: "cut" | "score" | "engrave"}
+
 
 // ── Beta Disclaimer ──
 function showBetaDisclaimer() {
@@ -732,6 +735,66 @@ function selectMaterial(key) {
   materialSelect.value = key;
 }
 
+
+// ── Per-color operation picker ──
+var ACI_HEX = {
+  1: '#ff0000', 2: '#ffff00', 3: '#00ff00', 4: '#00ffff',
+  5: '#0000ff', 6: '#ff00ff', 7: '#cccccc'
+};
+function aciHex(aci) {
+  if (ACI_HEX[aci]) return ACI_HEX[aci];
+  // Hash unknown ACIs to a visible hue
+  var h = ((aci * 47) % 360);
+  return 'hsl(' + h + ',70%,55%)';
+}
+function aciLabel(aci) {
+  var names = {1:'Red',2:'Yellow',3:'Green',4:'Cyan',5:'Blue',6:'Magenta',7:'Black/White'};
+  return names[aci] || ('Color ' + aci);
+}
+function allColorsInUse() {
+  var s = {};
+  for (var f in fileColors) (fileColors[f]||[]).forEach(function(c){ s[c] = true; });
+  return Object.keys(s).map(Number).sort(function(a,b){return a-b;});
+}
+function renderColorOps() {
+  var panel = $("colorOpsPanel"); var rows = $("colorOpsRows"); if (!panel||!rows) return;
+  var colors = allColorsInUse();
+  if (!colors.length) { panel.style.display = "none"; return; }
+  panel.style.display = "block";
+  rows.innerHTML = colors.map(function(aci){
+    var current = colorOps[aci] || "cut";
+    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">'
+      + '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:' + aciHex(aci) + ';border:1px solid rgba(0,0,0,0.2);"></span>'
+      + '<span style="flex:1;font-size:13px;color:var(--text);">' + aciLabel(aci) + '</span>'
+      + '<select data-aci="' + aci + '" onchange="setColorOp(' + aci + ', this.value)" style="font-size:12px;padding:2px 6px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">'
+      + '<option value="cut"' + (current==="cut"?" selected":"") + '>Cut</option>'
+      + '<option value="score"' + (current==="score"?" selected":"") + '>Score</option>'
+      + '<option value="engrave"' + (current==="engrave"?" selected":"") + '>Engrave</option>'
+      + '</select></div>';
+  }).join("");
+}
+function setColorOp(aci, op) { colorOps[aci] = op; }
+function gatherColorOpSettings(materialCutSpeed) {
+  // Returns {color_speeds: {aci: speed}, engrave_color: "5,7"}
+  var cs = {}; var engraveList = [];
+  var scoreSpeed = Math.max(100, (materialCutSpeed||16) * 4);
+  Object.keys(colorOps).forEach(function(aci){
+    var op = colorOps[aci];
+    if (op === "engrave") { engraveList.push(aci); }
+    else if (op === "score") { cs[aci] = scoreSpeed; }
+    else { cs[aci] = materialCutSpeed; }
+  });
+  // For any colors found but not explicitly set, default Cut
+  allColorsInUse().forEach(function(aci){
+    if (!colorOps[aci] && !engraveList.includes(aci)) cs[aci] = materialCutSpeed;
+  });
+  return { color_speeds: cs, engrave_color: engraveList.join(",") };
+}
+function clearColorOps() {
+  fileColors = {}; colorOps = {};
+  var panel = $("colorOpsPanel"); if (panel) panel.style.display = "none";
+}
+
 // ── Settings ──
 
 function gatherSettings() {
@@ -744,6 +807,14 @@ function gatherSettings() {
     var m = materials[selectedMaterial]; defaultSpeed = m.cut_speed;
     if (!matLabel) matLabel = m.name;
   }
+  // ── Per-color operation overrides ──
+  try {
+    var _mat = materials[selectedMaterial] || {}; var _matCut = _mat.cut_speed || 100;
+    var _picked = gatherColorOpSettings(_matCut);
+    for (var _k in _picked.color_speeds) cs[_k] = _picked.color_speeds[_k];
+    if (_picked.engrave_color) engraveColor = _picked.engrave_color;
+  } catch (e) {}
+
   return {
     rate: parseFloat($("s_rate").value) || 2.10, minimum: parseFloat($("s_minimum").value) || 65,
     material: matLabel, default_speed: defaultSpeed,
@@ -1039,4 +1110,9 @@ function pullLaserTime() {
 }
 </script>
 </body>
+<div id="colorOpsPanel" style="display:none;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--panel);font-size:13px;">
+  <div style="font-weight:600;margin-bottom:6px;color:var(--text);">Operation per color</div>
+  <div id="colorOpsRows"></div>
+  <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">Pick what each color does. Speeds use your selected material.</div>
+</div>
 </html>
