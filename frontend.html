@@ -31,7 +31,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
 
 /* ── LEFT: Preview ── */
 .col-preview {
-  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column-reverse; min-height: 0; overflow: hidden;
 }
 .preview-area {
   flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
@@ -84,26 +84,31 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
 
 /* File bar under preview */
 .file-bar {
-  flex-shrink: 0; border-top: 1px solid var(--border);
-  padding: 6px 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  flex-shrink: 0; border-bottom: 1px solid var(--border);
+  padding: 10px 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  background: var(--surface2);
 }
 .file-bar:empty { display: none; padding: 0; }
 .file-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 12px; background: var(--surface2); border-radius: 5px;
-  font-size: 13px; font-family: var(--mono);
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; font-size: 13px; color: var(--text);
 }
-.file-chip .fdims { color: var(--text-dim); font-size: 12px; }
+.file-chip .fname { font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-chip .fdims { color: var(--text); font-size: 12px; font-family: var(--mono); background: rgba(59,130,246,0.15); padding: 2px 6px; border-radius: 3px; }
 .file-chip .fremove {
   background: none; border: none; color: var(--text-dim);
   cursor: pointer; font-size: 15px; padding: 0 2px; margin-left: 2px;
 }
 .file-chip .fremove:hover { color: var(--red); }
 .add-more-btn {
-  padding: 5px 12px; background: none; border: 1px dashed var(--border);
-  border-radius: 5px; color: var(--text-dim); font-size: 13px; cursor: pointer; position: relative;
+  padding: 7px 14px; background: var(--accent); border: 0;
+  border-radius: 6px; color: #fff; font-size: 13px; font-weight: 600;
+  cursor: pointer; position: relative;
+  display: inline-flex; align-items: center; gap: 6px;
 }
-.add-more-btn:hover { border-color: var(--accent); color: var(--text); }
+.add-more-btn:hover { filter: brightness(1.1); }
+.add-more-btn::before { content: "+"; font-size: 16px; font-weight: 700; line-height: 1; margin-right: 2px; }
 .add-more-btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
 /* ── RIGHT: Sidebar — everything stacked ── */
