@@ -971,7 +971,10 @@ function clearDebugLog() { debugLog.textContent = "Cleared."; lastDebugLog = "";
 
 // ── Init ──
 
-showBetaDisclaimer();
+// Inline banner at the top of the page handles the beta disclaimer.
+// The old modal used sessionStorage which throws inside cross-origin
+// iframes (Chrome blocks third-party storage), killing init.
+try { showBetaDisclaimer(); } catch (e) { /* iframe / private mode */ }
 fetch("/api/defaults").then(function(r){return r.json();}).then(function(d) {
   $("s_rapid_speed").value=d.rapid_speed; $("s_cutting_accel").value=d.cutting_accel;
   $("s_rapid_accel").value=d.rapid_accel; $("s_junction_dev").value=d.junction_deviation;
@@ -1011,8 +1014,4 @@ function logEngraveActual() {
     .then(function(d) {
       if (d.success) {
         var st = d.stats || {};
-        fbStatus("Logged. " + st.n_measurements + " measurements across " +
-                 st.n_designs + " designs - model error now " + st.model_err_pct + "%.", "green");
-      } else { fbStatus("Failed: " + (d.error || "unknown error"), "red"); }
-    })
-    .catch(function(e
+        fbStatus("Logged. " +
