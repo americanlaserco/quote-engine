@@ -347,6 +347,12 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
       </div>
     </div>
 
+    <div id="colorOpsPanel" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:10px 12px;font-size:13px;">
+      <div style="font-weight:600;margin-bottom:6px;color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);">Operation per color</div>
+      <div id="colorOpsRows"></div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">Pick what each color does. Speeds use your selected material.</div>
+    </div>
+
     <details class="file-reqs-details">
       <summary>File Prep Guidelines</summary>
       <div class="reqs-content">
@@ -1146,9 +1152,4 @@ function pullLaserTime() {
 }
 </script>
 </body>
-<div id="colorOpsPanel" style="display:none;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--panel);font-size:13px;">
-  <div style="font-weight:600;margin-bottom:6px;color:var(--text);">Operation per color</div>
-  <div id="colorOpsRows"></div>
-  <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">Pick what each color does. Speeds use your selected material.</div>
-</div>
 </html>
