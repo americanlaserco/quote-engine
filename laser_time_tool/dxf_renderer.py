@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.collections import LineCollection
 
+from laser_time_tool.dxf_parser import _iter_entities
+
 
 def render_dxf_to_png(
     dxf_path: str,
@@ -54,7 +56,7 @@ def render_dxf_to_png(
 
     lines_by_color = {}
 
-    for entity in msp:
+    for entity in _iter_entities(msp, doc):
         # Resolve color
         color_idx = entity.dxf.color if hasattr(entity.dxf, "color") else 7
         if color_idx == 256:  # BYLAYER
@@ -92,6 +94,32 @@ def render_dxf_to_png(
                         lines_by_color[color].append([arc_pts[j], arc_pts[j + 1]])
                 else:
                     lines_by_color[color].append([(x1, y1), (x2, y2)])
+
+        elif etype == "POLYLINE":
+            # Old-style 2D polyline. Iterate vertices.
+            try:
+                pts = [(v.dxf.location.x, v.dxf.location.y) for v in entity.vertices]
+                for i in range(len(pts) - 1):
+                    lines_by_color[color].append([pts[i], pts[i + 1]])
+                if getattr(entity, "is_closed", False) and len(pts) > 1:
+                    lines_by_color[color].append([pts[-1], pts[0]])
+            except Exception:
+                pass
+
+        elif etype == "HATCH":
+            # Draw just the boundary path, not the fill, so engrave shapes
+            # at least appear in preview.
+            try:
+                for boundary in entity.paths:
+                    bpts = []
+                    for edge in getattr(boundary, "edges", []):
+                        if hasattr(edge, "start") and hasattr(edge, "end"):
+                            bpts.append((edge.start[0], edge.start[1]))
+                            bpts.append((edge.end[0], edge.end[1]))
+                    for i in range(0, len(bpts) - 1, 2):
+                        lines_by_color[color].append([bpts[i], bpts[i + 1]])
+            except Exception:
+                pass
 
         elif etype == "CIRCLE":
             cx, cy = entity.dxf.center.x, entity.dxf.center.y
