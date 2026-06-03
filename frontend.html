@@ -943,19 +943,27 @@ function sendQuoteEmail() {
   var cuttingTotal = Math.max(scaledCost, minimum);
   var grandTotal = cuttingTotal + mat.cost;
 
+  // Build a FormData so we can include the customer's original DXF/PDF/AI
+  // files as email attachments — the shop receives the file with the quote.
+  var emailFd = new FormData();
+  emailFd.append("payload", JSON.stringify({
+    client_email: clientEmail,
+    quote_data: lastQuoteData,
+    quantity: qty,
+    cutting_total: cuttingTotal,
+    material_cost: mat.cost,
+    grand_total: grandTotal,
+    material_name: selectedMaterial ? (materials[selectedMaterial] || {}).name || "" : "",
+    own_material: $("ownMaterial").checked,
+  }));
+  // Attach every file the customer dropped — the shop needs them to actually
+  // run the job, so make sure they\'re always included.
+  (dxfFiles || []).forEach(function(entry) {
+    if (entry && entry.file) emailFd.append("attachments", entry.file, entry.file.name);
+  });
   fetch("/api/email-quote", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_email: clientEmail,
-      quote_data: lastQuoteData,
-      quantity: qty,
-      cutting_total: cuttingTotal,
-      material_cost: mat.cost,
-      grand_total: grandTotal,
-      material_name: selectedMaterial ? (materials[selectedMaterial] || {}).name || "" : "",
-      own_material: $("ownMaterial").checked,
-    })
+    body: emailFd
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {

@@ -532,7 +532,14 @@ def email_quote():
     from email.mime.multipart import MIMEMultipart
 
     try:
-        data = request.get_json()
+        # Accept either multipart/form-data (with file attachments) or JSON.
+        if request.content_type and "multipart/form-data" in request.content_type:
+            data = json.loads(request.form.get("payload", "{}"))
+            uploaded_files = request.files.getlist("attachments")
+        else:
+            data = request.get_json() or {}
+            uploaded_files = []
+
         client_email = data.get("client_email", "").strip()
         if not client_email or "@" not in client_email:
             return jsonify({"success": False, "error": "Invalid email address"}), 400
@@ -623,13 +630,33 @@ Reply to this email to confirm your order or ask questions.</p>
         )
 
         SHOP_EMAIL = "americanlaserco@gmail.com"
-        msg = MIMEMultipart("alternative")
+        # "mixed" so we can attach DXF/PDF/AI files alongside the alternative body
+        msg = MIMEMultipart("mixed")
         msg["Subject"] = "American Laser Co. - Quote Estimate ($%.2f)" % grand_total
         msg["From"] = SHOP_EMAIL
         msg["To"] = "%s, %s" % (client_email, SHOP_EMAIL)
         msg["Reply-To"] = SHOP_EMAIL
-        msg.attach(MIMEText(body_text, "plain"))
-        msg.attach(MIMEText(body_html, "html"))
+
+        # Body part (alternative wrapping plain + html)
+        body_msg = MIMEMultipart("alternative")
+        body_msg.attach(MIMEText(body_text, "plain"))
+        body_msg.attach(MIMEText(body_html, "html"))
+        msg.attach(body_msg)
+
+        # Attach uploaded customer files (DXF/PDF/AI) so the shop receives them
+        from email.mime.application import MIMEApplication
+        for f in uploaded_files:
+            try:
+                blob = f.read()
+                if not blob:
+                    continue
+                part = MIMEApplication(blob)
+                fname = f.filename or "file.dxf"
+                part.add_header("Content-Disposition", "attachment", filename=fname)
+                msg.attach(part)
+                log("Email: attached %s (%d bytes)" % (fname, len(blob)))
+            except Exception as e:
+                log("Email: failed to attach %s: %s" % (getattr(f, "filename", "?"), e), "WARN")
 
         smtp_pass = os.environ.get("GMAIL_APP_PASSWORD", "")
         if not smtp_pass:
