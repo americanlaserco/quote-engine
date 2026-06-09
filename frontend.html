@@ -22,16 +22,16 @@
   --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-body { font-family: var(--sans); background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; line-height: 1.5; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
 
 /* ── Two columns: preview | sidebar ── */
 .main-layout {
-  display: grid; grid-template-columns: 1fr 300px; height: 100vh;
+  display: grid; grid-template-columns: 1fr 300px; min-height: 100vh;
 }
 
 /* ── LEFT: Preview ── */
 .col-preview {
-  display: flex; flex-direction: column-reverse; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column-reverse; min-height: 0;
 }
 .preview-area {
   flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
@@ -115,7 +115,6 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
 .col-sidebar {
   display: flex; flex-direction: column; gap: 8px;
   padding: 12px; border-left: 1px solid var(--border);
-  overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent;
 }
 .sidebar-label {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
