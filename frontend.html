@@ -309,6 +309,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); min-
         <input type="file" id="dxfInput" multiple accept=".dxf,.ai,.pdf" />
         <h3>Drop DXF, AI or PDF Files Here</h3>
         <p>or click to browse</p>
+        <p class="nest-warning" style="margin-top:14px; font-size:13px; color:#ff4d2d; font-weight:600; max-width:420px; line-height:1.45;">⚠ Nest your parts tightly. Poorly nested files (lots of empty space between parts) will produce an extremely high quote.</p>
       </div>
       <div class="preview-grid" id="previewGrid" style="display:none;"></div>
     </div>
@@ -371,6 +372,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); min-
     </details>
 
     <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+    <p style="margin:0 0 8px; font-size:12px; color:#ff4d2d; font-weight:600; line-height:1.45;">Poorly nested files = extremely high quote. Pack parts tight before exporting.</p>
     <div class="quote-row">
       <button class="quote-btn" id="quoteBtn" disabled>Get Quote</button>
       <button class="admin-btn" onclick="toggleAdmin()" title="Admin">&#9881;</button>
