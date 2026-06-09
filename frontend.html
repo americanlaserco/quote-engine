@@ -24,9 +24,9 @@
 
 body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
 
-/* ── Two columns: preview | sidebar ── */
+/* ── Stacked: preview on top, sidebar/controls below ── */
 .main-layout {
-  display: grid; grid-template-columns: 1fr 300px; min-height: 100vh;
+  display: grid; grid-template-columns: 1fr; grid-template-rows: auto auto; min-height: 100vh;
 }
 
 /* ── LEFT: Preview ── */
@@ -34,7 +34,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); min-
   display: flex; flex-direction: column-reverse; min-height: 0;
 }
 .preview-area {
-  flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+  flex: 1; min-height: 360px; display: flex; align-items: center; justify-content: center;
   padding: 12px; overflow: hidden;
 }
 
@@ -114,7 +114,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); min-
 /* ── RIGHT: Sidebar — everything stacked ── */
 .col-sidebar {
   display: flex; flex-direction: column; gap: 8px;
-  padding: 12px; border-left: 1px solid var(--border);
+  padding: 12px; border-top: 1px solid var(--border);
 }
 .sidebar-label {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
